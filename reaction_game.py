@@ -3,7 +3,7 @@ import utime
 
 
 # Configuration Constants
-LED_JUMP_TIME = 0.15 # in seconds
+LED_JUMP_TIME = 0.05 # in seconds
 TIME_DECREMENT = 0.05 # in seconds
 DEBOUNCE_TIME = 150 # in ms
 
@@ -48,7 +48,11 @@ def off_leds():
     
 def won_animation():
     """Display a winning animation using LEDs."""
+    for pin in pins_out:
+        pin.on()
+    utime.sleep(1)
     global button_pressed
+    button_pressed = False
     alternate = False
     while not button_pressed:
         for index, pin in enumerate(pins_out):
@@ -68,23 +72,21 @@ def game_logic(index):
     
     if won_round:
         sleep_time -= TIME_DECREMENT
-        if sleep_time < TIME_DECREMENT:
-            button_pressed = False
-            won_animation()
-            machine.soft_reset()
-        else:
-            initialize_round()
+        initialize_round()
     elif target_pin == index:
         frozen_pins[index] = True
         target_pin += 1
         if target_pin >= len(pins_out) - 1:
             won_round = True
+            if sleep_time - TIME_DECREMENT < TIME_DECREMENT:
+                won_animation()
+                machine.soft_reset()
     else:
         pass
-        button_pressed = False
-        while(not button_pressed):
-            pass
-        machine.soft_reset()
+        #button_pressed = False
+        #while(not button_pressed):
+        #    pass
+        #machine.soft_reset()
         
     button_pressed = False
     return True
