@@ -12,7 +12,7 @@ pins_out = [machine.Pin(i, machine.Pin.OUT) for i in range(6)]
 full_sequence = pins_out + list(reversed(pins_out[1:-1]))
 pin_button = machine.Pin(16, machine.Pin.IN)
 button_pressed = False
-last_interrupt_time = utime.ticks_add(utime.ticks_ms(), -DEBOUNCE_TIME)
+last_interrupt_time = utime.ticks_add(utime.ticks_ms(), DEBOUNCE_TIME)
 
 def is_valid_press():
     """Check if the button press is valid (debounce)."""
