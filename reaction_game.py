@@ -3,32 +3,37 @@ import utime
 
 
 # Config
-# Time between led jumps
-sleep_time = 0.15
-# Debounce time between button presses
-DEBOUNCE_TIME = 0.2
+# Time between led jumps in seconds
+LED_JUMP_TIME = 0.15
+# Debounce time between button presses in miliseconds
+DEBOUNCE_TIME = 100
 # Time to decrement from jumps after each round
 TIME_DECREMENT = 0.05
 
 pins_out = [machine.Pin(i, machine.Pin.OUT) for i in range(6)]
 
 pin_button = machine.Pin(16, machine.Pin.IN)
-last_interrupt_time = 0
 button_pressed = False
+
+last_interrupt_time = utime.ticks_add(utime.ticks_ms(), -DEBOUNCE_TIME)
+def is_valid_press():
+    global last_interrupt_time
+    
+    current_time = utime.ticks_ms()
+    if utime.ticks_diff(current_time, last_interrupt_time) < DEBOUNCE_TIME:
+        return False
+    last_interrupt_time = current_time
+    return True
+
 def button_isr(pin):
     global button_pressed
+    
     if button_pressed:
         return
-        
-    global last_interrupt_time
-    current_time = utime.ticks_ms()
     
-    if current_time - last_interrupt_time < DEBOUNCE_TIME:
-        return
-    
-    last_interrupt_time = current_time
-    
-    button_pressed = True
+    if is_valid_press():
+        button_pressed = True
+
     
 pin_button.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_isr)
 
@@ -37,7 +42,7 @@ total_pins = len(pins_out)
 
 
 def initialize_round_state():
-    global frozen_pins, target_pin, won_round
+    global frozen_pins, target_pin, won_round, sleep_time
     frozen_pins = [False for _ in range(len(pins_out))]
     target_pin = 0
     won_round = False
@@ -50,11 +55,16 @@ def off_leds():
 def won_animation():
     pass
 
+def get_actual_index(enumerated_index):
+    if enumerated_index >= len(pins_out):
+        return 2*len(pins_out) - enumerated_index - 2
+    return enumerated_index
+
 initialize_round_state()
+sleep_time = LED_JUMP_TIME
 while True:
     for index, pin in enumerate(full_sequence):
-        if index >= len(pins_out):
-            index = 2*len(pins_out) - index - 2
+        index = get_actual_index(index)
         if not frozen_pins[index]:
             pin.on()
             utime.sleep(sleep_time)
@@ -63,6 +73,11 @@ while True:
                     sleep_time -= TIME_DECREMENT
                     if sleep_time < TIME_DECREMENT:
                         won_animation()
+                        # Reset jump time
+                        sleep_time = LED_JUMP_TIME
+                        button_pressed = False
+                        initialize_round_state()
+                        break
                     initialize_round_state()
                 elif target_pin == index:
                     frozen_pins[index] = True
@@ -71,7 +86,8 @@ while True:
                         won_round = True
                 else:
                     # Soft reset doesn't work in debug mode in Thonny
-                    machine.soft_reset()
+                    #machine.soft_reset()
+                    pass
                     
                 button_pressed = False
             else:
