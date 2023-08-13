@@ -2,24 +2,21 @@ import machine
 import utime
 
 
-# Time between led jumps in seconds
-LED_JUMP_TIME = 0.15
-# Debounce time between button presses in miliseconds
-DEBOUNCE_TIME = 100
-# Time to decrement from jumps after each round
-TIME_DECREMENT = 0.05
+# Configuration Constants
+LED_JUMP_TIME = 0.15 # in seconds
+TIME_DECREMENT = 0.05 # in seconds
+DEBOUNCE_TIME = 100 # in ms
 
+# Initialization
 pins_out = [machine.Pin(i, machine.Pin.OUT) for i in range(6)]
 full_sequence = pins_out + list(reversed(pins_out[1:-1]))
-
 pin_button = machine.Pin(16, machine.Pin.IN)
-
 button_pressed = False
-
 last_interrupt_time = utime.ticks_add(utime.ticks_ms(), -DEBOUNCE_TIME)
+
 def is_valid_press():
+    """Check if the button press is valid (debounce)."""
     global last_interrupt_time
-    
     current_time = utime.ticks_ms()
     if utime.ticks_diff(current_time, last_interrupt_time) < DEBOUNCE_TIME:
         return False
@@ -27,48 +24,39 @@ def is_valid_press():
     return True
 
 def button_isr(pin):
+    """Interrupt service routine for the button."""
     global button_pressed
-    
-    if button_pressed:
-        return
-    
-    if is_valid_press():
+    if not button_pressed and is_valid_press():
         button_pressed = True
 
 
-# Set up button interrupt service routine
 pin_button.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_isr)
 
+
 def initialize_round_state():
-    global frozen_pins, target_pin, won_round, sleep_time
+    """Reset game state for a new round."""
+    global frozen_pins, target_pin, won_round
     frozen_pins = [False for _ in range(len(pins_out))]
     target_pin = 0
     won_round = False
     off_leds()
     
 def off_leds():
+    """Turn off all LEDs."""
     for pin in pins_out:
         pin.off()
     
 def won_animation():
-    off_leds()
+    """Display a winning animation using LEDs."""
     alternate = False
     while True:
-        if alternate:
-            for index, pin in enumerate(pins_out):
-                if index % 2 == 0:
-                    pin.on()
-                else:
-                    pin.off()
-            alternate = not alternate
-        else:
-            for index, pin in enumerate(pins_out):
-                if index % 2 != 0:
-                    pin.on()
-                else:
-                    pin.off()
-            alternate = not alternate
-        utime.sleep(.5)
+        for index, pin in enumerate(pins_out):
+            if (index % 2 == 0) == alternate:
+                pin.on()
+            else:
+                pin.off()
+        alternate = not alternate
+        utime.sleep(0.5)
 
 def get_actual_index(enumerated_index):
     if enumerated_index >= len(pins_out):
@@ -77,7 +65,6 @@ def get_actual_index(enumerated_index):
 
 initialize_round_state()
 sleep_time = LED_JUMP_TIME
-won_animation()
 while True:
     for index, pin in enumerate(full_sequence):
         index = get_actual_index(index)
