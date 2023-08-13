@@ -48,8 +48,9 @@ def off_leds():
     
 def won_animation():
     """Display a winning animation using LEDs."""
+    global button_pressed
     alternate = False
-    while True:
+    while not button_pressed:
         for index, pin in enumerate(pins_out):
             if (index % 2 == 0) == alternate:
                 pin.on()
@@ -68,8 +69,9 @@ def game_logic(index):
     if won_round:
         sleep_time -= TIME_DECREMENT
         if sleep_time < TIME_DECREMENT:
+            button_pressed = False
             won_animation()
-            reset_game()
+            machine.soft_reset()
         else:
             initialize_round()
     elif target_pin == index:
@@ -78,6 +80,7 @@ def game_logic(index):
         if target_pin >= len(pins_out) - 1:
             won_round = True
     else:
+        pass
         button_pressed = False
         while(not button_pressed):
             pass
@@ -85,13 +88,6 @@ def game_logic(index):
         
     button_pressed = False
     return True
-    
-def reset_game():
-    """Reset the entire game to its initial state."""
-    global sleep_time
-    sleep_time = LED_JUMP_TIME
-    initialize_round()
-    off_leds()
 
 
 def main_game_loop():
