@@ -2,7 +2,6 @@ import machine
 import utime
 
 
-# Config
 # Time between led jumps in seconds
 LED_JUMP_TIME = 0.15
 # Debounce time between button presses in miliseconds
@@ -11,8 +10,10 @@ DEBOUNCE_TIME = 100
 TIME_DECREMENT = 0.05
 
 pins_out = [machine.Pin(i, machine.Pin.OUT) for i in range(6)]
+full_sequence = pins_out + list(reversed(pins_out[1:-1]))
 
 pin_button = machine.Pin(16, machine.Pin.IN)
+
 button_pressed = False
 
 last_interrupt_time = utime.ticks_add(utime.ticks_ms(), -DEBOUNCE_TIME)
@@ -34,12 +35,9 @@ def button_isr(pin):
     if is_valid_press():
         button_pressed = True
 
-    
+
+# Set up button interrupt service routine
 pin_button.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_isr)
-
-full_sequence = pins_out + list(reversed(pins_out[1:-1]))
-total_pins = len(pins_out)
-
 
 def initialize_round_state():
     global frozen_pins, target_pin, won_round, sleep_time
@@ -53,7 +51,24 @@ def off_leds():
         pin.off()
     
 def won_animation():
-    pass
+    off_leds()
+    alternate = False
+    while True:
+        if alternate:
+            for index, pin in enumerate(pins_out):
+                if index % 2 == 0:
+                    pin.on()
+                else:
+                    pin.off()
+            alternate = not alternate
+        else:
+            for index, pin in enumerate(pins_out):
+                if index % 2 != 0:
+                    pin.on()
+                else:
+                    pin.off()
+            alternate = not alternate
+        utime.sleep(.5)
 
 def get_actual_index(enumerated_index):
     if enumerated_index >= len(pins_out):
@@ -62,6 +77,7 @@ def get_actual_index(enumerated_index):
 
 initialize_round_state()
 sleep_time = LED_JUMP_TIME
+won_animation()
 while True:
     for index, pin in enumerate(full_sequence):
         index = get_actual_index(index)
@@ -73,7 +89,8 @@ while True:
                     sleep_time -= TIME_DECREMENT
                     if sleep_time < TIME_DECREMENT:
                         won_animation()
-                        # Reset jump time
+                        off_leds()
+                        # Reset game + round variables
                         sleep_time = LED_JUMP_TIME
                         button_pressed = False
                         initialize_round_state()
