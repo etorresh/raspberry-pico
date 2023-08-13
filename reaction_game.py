@@ -3,7 +3,7 @@ import utime
 
 
 # Configuration Constants
-LED_JUMP_TIME = 0.05 # in seconds
+LED_JUMP_TIME = 0.15 # in seconds
 TIME_DECREMENT = 0.05 # in seconds
 DEBOUNCE_TIME = 150 # in ms
 
@@ -82,11 +82,10 @@ def game_logic(index):
                 won_animation()
                 machine.soft_reset()
     else:
-        pass
-        #button_pressed = False
-        #while(not button_pressed):
-        #    pass
-        #machine.soft_reset()
+        button_pressed = False
+        while(not button_pressed):
+            pass
+        machine.soft_reset()
         
     button_pressed = False
     return True
