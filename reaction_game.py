@@ -33,7 +33,7 @@ def button_isr(pin):
 pin_button.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_isr)
 
 
-def initialize_round_state():
+def initialize_round():
     """Reset game state for a new round."""
     global frozen_pins, target_pin, won_round
     frozen_pins = [False for _ in range(len(pins_out))]
@@ -58,41 +58,57 @@ def won_animation():
         alternate = not alternate
         utime.sleep(0.5)
 
-def get_actual_index(enumerated_index):
-    if enumerated_index >= len(pins_out):
-        return 2*len(pins_out) - enumerated_index - 2
-    return enumerated_index
 
-initialize_round_state()
-sleep_time = LED_JUMP_TIME
-while True:
-    for index, pin in enumerate(full_sequence):
-        index = get_actual_index(index)
-        if not frozen_pins[index]:
-            pin.on()
-            utime.sleep(sleep_time)
-            if button_pressed:
-                if won_round:
-                    sleep_time -= TIME_DECREMENT
-                    if sleep_time < TIME_DECREMENT:
-                        won_animation()
-                        off_leds()
-                        # Reset game + round variables
-                        sleep_time = LED_JUMP_TIME
-                        button_pressed = False
-                        initialize_round_state()
-                        break
-                    initialize_round_state()
-                elif target_pin == index:
-                    frozen_pins[index] = True
-                    target_pin += 1
-                    if target_pin >= len(pins_out) - 1:
-                        won_round = True
-                else:
-                    # Soft reset doesn't work in debug mode in Thonny
-                    #machine.soft_reset()
-                    pass
-                    
-                button_pressed = False
-            else:
-                pin.off()
+def game_logic(index):
+    """Implement game's core logic for button presses."""
+    global button_pressed, won_round, target_pin, sleep_time
+    if not button_pressed:
+        return False
+    
+    if won_round:
+        sleep_time -= TIME_DECREMENT
+        if sleep_time < TIME_DECREMENT:
+            won_animation()
+            reset_game()
+        else:
+            initialize_round()
+    elif target_pin == index:
+        frozen_pins[index] = True
+        target_pin += 1
+        if target_pin >= len(pins_out) - 1:
+            won_round = True
+    else:
+        button_pressed = False
+        while(not button_pressed):
+            pass
+        machine.soft_reset()
+        
+    button_pressed = False
+    return True
+    
+def reset_game():
+    """Reset the entire game to its initial state."""
+    global sleep_time
+    sleep_time = LED_JUMP_TIME
+    initialize_round()
+    off_leds()
+
+
+def main_game_loop():
+    """Main game loop."""
+    global sleep_time
+    sleep_time = LED_JUMP_TIME
+    initialize_round()
+    while True:
+        for index, pin in enumerate(full_sequence):
+            if index >= len(pins_out):
+                index = 2 * len(pins_out) - index - 2
+
+            if not frozen_pins[index]:
+                pin.on()
+                utime.sleep(sleep_time)
+                if (not game_logic(index)):
+                    pin.off()
+
+if __name__ == '__main__':
+    main_game_loop()
