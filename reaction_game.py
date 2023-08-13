@@ -5,7 +5,7 @@ import utime
 # Configuration Constants
 LED_JUMP_TIME = 0.15 # in seconds
 TIME_DECREMENT = 0.05 # in seconds
-DEBOUNCE_TIME = 100 # in ms
+DEBOUNCE_TIME = 150 # in ms
 
 # Initialization
 pins_out = [machine.Pin(i, machine.Pin.OUT) for i in range(6)]
